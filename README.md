@@ -1,4 +1,4 @@
-# 📘 Swift Planetarium - Documentation
+# 📘  Documentation
 
 Aplikasi ini adalah sistem backend modern yang menggabungkan **RESTful API** yang aman dan **Admin Panel** yang user-friendly. Dibangun menggunakan Laravel 11, Filament v3, dan JWT Authentication.
 
