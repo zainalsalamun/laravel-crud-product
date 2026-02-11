@@ -8,6 +8,8 @@ use App\Models\Product;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Http\Resources\ProductResource;
+use Illuminate\Database\EntityNotFoundException;
+use Exception;
 
 class ProductController extends Controller
 {
@@ -16,12 +18,20 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $products = Product::latest()->get();
-        return response()->json([
-            'success' => true,
-            'message' => 'List Data Product',
-            'data' => ProductResource::collection($products),
-        ]);
+        try {
+            $products = Product::latest()->get();
+            return response()->json([
+                'success' => true,
+                'message' => 'List Data Product',
+                'data' => ProductResource::collection($products),
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -29,13 +39,21 @@ class ProductController extends Controller
      */
     public function store(StoreProductRequest $request)
     {
-        $product = Product::create($request->validated());
+        try {
+            $product = Product::create($request->validated());
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Product created',
-            'data' => new ProductResource($product),
-        ], 201);
+            return response()->json([
+                'success' => true,
+                'message' => 'Product created',
+                'data' => new ProductResource($product),
+            ], 201);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to create product',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     /**
@@ -43,20 +61,28 @@ class ProductController extends Controller
      */
     public function show(string $id)
     {
-        $product = Product::find($id);
+        try {
+            $product = Product::find($id);
 
-        if (!$product) {
+            if (!$product) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Product not found',
+                ], 404);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Detail Data Product',
+                'data' => new ProductResource($product),
+            ], 200);
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Product not found',
-            ], 404);
+                'message' => 'Internal Server Error',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Detail Data Product',
-            'data' => new ProductResource($product),
-        ]);
     }
 
     /**
@@ -64,22 +90,30 @@ class ProductController extends Controller
      */
     public function update(UpdateProductRequest $request, string $id)
     {
-        $product = Product::find($id);
+        try {
+            $product = Product::find($id);
 
-        if (!$product) {
+            if (!$product) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Product not found',
+                ], 404);
+            }
+
+            $product->update($request->validated());
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Product updated',
+                'data' => new ProductResource($product),
+            ], 200);
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Product not found',
-            ], 404);
+                'message' => 'Failed to update product',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $product->update($request->validated());
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Product updated',
-            'data' => new ProductResource($product),
-        ]);
     }
 
     /**
@@ -87,20 +121,28 @@ class ProductController extends Controller
      */
     public function destroy(string $id)
     {
-        $product = Product::find($id);
+        try {
+            $product = Product::find($id);
 
-        if (!$product) {
+            if (!$product) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Product not found',
+                ], 404);
+            }
+
+            $product->delete();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Product deleted',
+            ], 200);
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Product not found',
-            ], 404);
+                'message' => 'Failed to delete product',
+                'error' => $e->getMessage()
+            ], 500);
         }
-
-        $product->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Product deleted',
-        ]);
     }
 }
