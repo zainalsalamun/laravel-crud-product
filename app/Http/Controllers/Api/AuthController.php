@@ -8,75 +8,131 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Exception;
 
 class AuthController extends Controller
 {
+    public function __construct()
+    {
+        // Require auth for these methods, except login and register
+        // But we handle this via routes usually.
+        // However, middleware can be applied here too.
+    }
+
     public function register(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8',
-        ]);
+        try {
+            $request->validate([
+                'name' => 'required|string|max:255',
+                'email' => 'required|string|email|max:255|unique:users',
+                'password' => 'required|string|min:8',
+            ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-        ]);
+            $user = User::create([
+                'name' => $request->name,
+                'email' => $request->email,
+                'password' => Hash::make($request->password),
+            ]);
 
-        $token = $user->createToken('auth_token')->plainTextToken;
+            $token = auth('api')->login($user);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'User created successfully',
-            'data' => $user,
-            'token' => $token,
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'User created successfully',
+                'data' => $user,
+                'token' => $token,
+            ], 201);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Registration failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function login(Request $request)
     {
-        $request->validate([
-            'email' => 'required|email',
-            'password' => 'required',
-        ]);
+        try {
+            $credentials = $request->validate([
+                'email' => 'required|email',
+                'password' => 'required',
+            ]);
 
-        $user = User::where('email', $request->email)->first();
+            if (! $token = auth('api')->attempt($credentials)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invalid credentials',
+                ], 401);
+            }
 
-        if (! $user || ! Hash::check($request->password, $user->password)) {
+            return $this->respondWithToken($token);
+        } catch (Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid credentials',
+                'message' => 'Login failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function logout()
+    {
+        try {
+            auth('api')->logout();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Logged out successfully',
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Logout failed',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function user()
+    {
+        try {
+            return response()->json([
+                'success' => true,
+                'message' => 'User profile',
+                'data' => auth('api')->user(),
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve user profile',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function refresh()
+    {
+        try {
+            return $this->respondWithToken(auth('api')->refresh());
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Refresh token failed',
+                'error' => $e->getMessage()
             ], 401);
         }
+    }
 
-        $token = $user->createToken('auth_token')->plainTextToken;
-
+    protected function respondWithToken($token)
+    {
         return response()->json([
             'success' => true,
             'message' => 'Login success',
-            'data' => $user,
+            'data' => auth('api')->user(),
             'token' => $token,
-        ]);
-    }
-
-    public function logout(Request $request)
-    {
-        $request->user()->currentAccessToken()->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Logged out successfully',
-        ]);
-    }
-
-    public function user(Request $request)
-    {
-        return response()->json([
-            'success' => true,
-            'message' => 'User profile',
-            'data' => $request->user(),
-        ]);
+            'token_type' => 'bearer',
+            'expires_in' => auth('api')->factory()->getTTL() * 60
+        ], 200);
     }
 }

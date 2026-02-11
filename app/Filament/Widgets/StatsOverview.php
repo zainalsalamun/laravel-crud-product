@@ -14,7 +14,7 @@ class StatsOverview extends BaseWidget
         return [
             Stat::make('Total Product', Product::count()),
             Stat::make('Total Stock', Product::sum('stock')),
-            Stat::make('Total Value', '$' . number_format(Product::query()->sum(DB::raw('price * stock')), 2)),
+            Stat::make('Total Value', 'Rp ' . number_format(Product::query()->sum(DB::raw('price * stock')), 0, ',', '.')),
         ];
     }
 }
