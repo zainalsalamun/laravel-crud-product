@@ -1,59 +1,148 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# 📘 Swift Planetarium - Documentation
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplikasi ini adalah sistem backend modern yang menggabungkan **RESTful API** yang aman dan **Admin Panel** yang user-friendly. Dibangun menggunakan Laravel 11, Filament v3, dan JWT Authentication.
 
-## About Laravel
+---
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🏗️ Arsitektur Aplikasi
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+### Technology Stack
+-   **Framework**: Laravel 11
+-   **Language**: PHP 8.2+
+-   **Database**: MySQL
+-   **Authentication**: JWT (JSON Web Token) via `php-open-source-saver/jwt-auth`
+-   **Admin Panel**: FilamentPHP v3
+-   **Server**: Apache/Nginx (Local: `php artisan serve`)
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Struktur Folder Utama
+-   `app/Http/Controllers/Api`: Menangani logic request & response API.
+-   `app/Http/Resources`: Mengatur format JSON response agar konsisten.
+-   `app/Http/Requests`: Validasi input request terpusat.
+-   `app/Filament`: Logic untuk Admin Panel (Resources, Widgets, Pages).
+-   `routes/api.php`: Definisi endpoint API.
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## 🔐 Alur Autentikasi (JWT)
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Sistem ini menggunakan **Stateless Authentication** dengan JWT. Client (Frontend/Mobile) tidak perlu menyimpan session/cookie, cukup menyimpan **Token**.
 
-## Laravel Sponsors
+### 1. Proses Login
+1.  Client mengirim `POST /api/login` dengan `email` dan `password`.
+2.  Server memvalidasi kredensial.
+3.  Jika valid, Server men-generate **Access Token** (String JWT panjang).
+4.  Server merespons dengan JSON berisi `token`, `token_type` (Bearer), dan `expires_in`.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 2. Mengakses Protected Route
+1.  Client ingin mengakses data produk (`GET /api/products`).
+2.  Client **WAJIB** menyertakan token di Header request:
+    ```http
+    Authorization: Bearer <token_anda_disini>
+    ```
+3.  Server memvalidasi signature dan masa berlaku token.
+4.  Jika valid -> Request diproses.
+5.  Jika expired/invalid -> Server merespons `401 Unauthorized`.
 
-### Premium Partners
+### 3. Refresh Token
+Token memiliki masa berlaku (default 60 menit). Jika expired:
+1.  Client mengirim request ke `POST /api/refresh` dengan token lama di header.
+2.  Server mem-blacklist token lama dan memberikan **Token Baru**.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+---
 
-## Contributing
+## 🔌 API Integration Guide
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Standar Response
+Semua endpoint menggunakan format JSON standar:
 
-## Code of Conduct
+**Sukses (200 OK / 201 Created)**
+```json
+{
+    "success": true,
+    "message": "Operasi berhasil",
+    "data": { ... } // Object atau Array data
+}
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+**Gagal (400 - 500)**
+```json
+{
+    "success": false,
+    "message": "Pesan error yang jelas",
+    "error": "Detail teknis error (opsional)"
+}
+```
 
-## Security Vulnerabilities
+### Daftar Endpoint Utama
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+#### Auth
+-   `POST /api/register`: Pendaftaran user baru.
+-   `POST /api/login`: Mendapatkan token, wajib untuk askes fitur lain.
+-   `POST /api/logout`: Menghapus sesi token.
+-   `GET /api/user`: Mendapatkan profil user yang sedang login.
 
-## License
+#### Products (CRUD)
+-   `GET /api/products`: Mengambil semua data produk (Terbaru diatas).
+-   `POST /api/products`: Tambah produk baru (Perlu validasi).
+-   `GET /api/products/{id}`: Detail satu produk.
+-   `PUT /api/products/{id}`: Update data produk.
+-   `DELETE /api/products/{id}`: Hapus produk selamanya.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+## 🖥️ Admin Panel (Filament)
+
+Aplikasi memiliki backend dashboard untuk administrator mengelola konten tanpa koding.
+
+**Fitur Utama:**
+1.  **Dashboard**: Statistik ringkas (Total Produk, Stok, Nilai Aset).
+2.  **Manajemen Produk**: Tabel data dengan fitur pencarian, filter, edit, dan hapus.
+3.  **Lokalisasi Indonesia**:
+    -   Mata Uang: **Rupiah (Rp)**.
+    -   Format Angka: Menggunakan pemisah ribuan titik (contoh: `150.000`).
+    -   Label: Semua menu dan form menggunakan Bahasa Indonesia.
+4.  **Multi-Bahasa**: Switcher bahasa (ID/EN) di pojok kanan atas.
+
+---
+
+## 💾 Skema Database
+
+### `users`
+Menyimpan data otentikasi admin dan user API.
+-   `id`: Primary Key.
+-   `name`: Nama lengkap.
+-   `email`: Email unik untuk login.
+-   `password`: Hash password (Bcrypt).
+
+### `products`
+Menyimpan katalog barang.
+-   `id`: Primary Key.
+-   `name`: Nama produk (String).
+-   `description`: Penjelasan detail produk (Text/Nullable).
+-   `price`: Harga satuan (Decimal).
+-   `stock`: Jumlah stok tersedia (Integer).
+-   `created_at`, `updated_at`: Timestamp otomatis.
+
+---
+
+## 🚀 Deployment & Setup Production
+
+Jika aplikasi ini akan di-deploy ke server production (VPS/Hosting):
+
+1.  **Environment**: Ubah `.env`:
+    ```env
+    APP_ENV=production
+    APP_DEBUG=false
+    APP_URL=https://domain-anda.com
+    ```
+2.  **JWT Secret**: Generate secret baru yang kuat:
+    ```bash
+    php artisan jwt:secret
+    ```
+3.  **Optimization**: Cache konfigurasi dan route untuk performa:
+    ```bash
+    php artisan config:cache
+    php artisan route:cache
+    php artisan view:cache
+    ```
+4.  **Admin User**: Pastikan membuat user admin baru yang aman.
